@@ -1,0 +1,209 @@
+---
+# Source: vpa-operator/templates/crds/vpamanager-crd.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vpamanagers.operators.joaomo.io
+  labels:
+    helm.sh/chart: vpa-operator-0.1.0
+    app.kubernetes.io/name: vpa-operator
+    app.kubernetes.io/instance: vpa-operator
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+spec:
+  group: operators.joaomo.io
+  names:
+    kind: VpaManager
+    listKind: VpaManagerList
+    plural: vpamanagers
+    shortNames:
+    - vpam
+    singular: vpamanager
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.enabled
+      name: Enabled
+      type: boolean
+    - jsonPath: .spec.updateMode
+      name: UpdateMode
+      type: string
+    - jsonPath: .status.managedVPAs
+      name: ManagedVPAs
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: VpaManager is the Schema for the vpamanagers API
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VpaManagerSpec defines the desired state of VpaManager
+            properties:
+              deploymentSelector:
+                description: DeploymentSelector selects deployments to manage
+                properties:
+                  matchExpressions:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
+              enabled:
+                default: true
+                description: Enabled controls whether VPAs are created
+                type: boolean
+              namespaceSelector:
+                description: NamespaceSelector selects namespaces to watch
+                properties:
+                  matchExpressions:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
+              resourcePolicy:
+                description: ResourcePolicy controls VPA resource recommendations
+                properties:
+                  containerPolicies:
+                    items:
+                      properties:
+                        containerName:
+                          type: string
+                        controlledResources:
+                          items:
+                            type: string
+                          type: array
+                        controlledValues:
+                          type: string
+                        maxAllowed:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            x-kubernetes-int-or-string: true
+                          type: object
+                        minAllowed:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            x-kubernetes-int-or-string: true
+                          type: object
+                        mode:
+                          type: string
+                      type: object
+                    type: array
+                type: object
+              updateMode:
+                default: "Off"
+                description: UpdateMode controls how VPA applies recommendations
+                enum:
+                - "Off"
+                - Initial
+                - Auto
+                type: string
+            type: object
+          status:
+            description: VpaManagerStatus defines the observed state of VpaManager
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      type: integer
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastReconcileTime:
+                format: date-time
+                type: string
+              managedDeployments:
+                description: ManagedDeployments is a list of deployments that have VPAs
+                items:
+                  description: DeploymentReference contains information about a deployment with a VPA
+                  properties:
+                    name:
+                      description: Name is the name of the deployment
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the deployment
+                      type: string
+                    uid:
+                      description: UID is the UID of the deployment
+                      type: string
+                    vpaName:
+                      description: VpaName is the name of the VPA resource
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  - uid
+                  - vpaName
+                  type: object
+                type: array
+              managedVPAs:
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

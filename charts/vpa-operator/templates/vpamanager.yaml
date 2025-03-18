@@ -1,0 +1,10 @@
+{{- if .Values.defaultVpaManager.enabled -}}
+apiVersion: operators.joaomo.io/v1
+kind: VpaManager
+metadata:
+  name: {{ .Values.defaultVpaManager.name }}
+  labels:
+    {{- include "vpa-operator.labels" . | nindent 4 }}
+spec:
+  {{- toYaml .Values.defaultVpaManager.spec | nindent 2 }}
+{{- end }}

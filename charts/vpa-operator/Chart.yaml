@@ -1,0 +1,36 @@
+apiVersion: v2
+name: vpa-operator
+description: A Helm chart for the VPA Operator that manages Vertical Pod Autoscalers for Kubernetes deployments
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/joaomo/k8s_op_vpa
+sources:
+  - https://github.com/joaomo/k8s_op_vpa
+maintainers:
+  - name: joaomo
+    url: https://github.com/joaomo
+keywords:
+  - kubernetes
+  - operator
+  - vpa
+  - vertical-pod-autoscaler
+  - autoscaling
+annotations:
+  # External CRD dependency - must be installed separately
+  # Install with: kubectl apply -f https://raw.githubusercontent.com/kubernetes/autoscaler/master/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+  artifacthub.io/crds: |
+    - kind: VerticalPodAutoscaler
+      version: v1
+      name: verticalpodautoscalers.autoscaling.k8s.io
+      description: Required external CRD from kubernetes/autoscaler project
+  artifacthub.io/crdsExamples: |
+    - apiVersion: autoscaling.k8s.io/v1
+      kind: VerticalPodAutoscaler
+      metadata:
+        name: example-vpa
+      spec:
+        targetRef:
+          apiVersion: apps/v1
+          kind: Deployment
+          name: my-deployment
