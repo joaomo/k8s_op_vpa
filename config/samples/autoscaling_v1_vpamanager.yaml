@@ -1,0 +1,28 @@
+apiVersion: operators.joaomo.io/v1
+kind: VpaManager
+metadata:
+  labels:
+    app.kubernetes.io/name: vpamanager
+    app.kubernetes.io/instance: vpamanager-sample
+    app.kubernetes.io/part-of: vpa-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: vpa-operator
+  name: vpamanager-sample
+spec:
+  enabled: true
+  updateMode: "Off"
+  namespaceSelector:
+    matchLabels:
+      vpa-enabled: "true"
+  deploymentSelector:
+    matchLabels:
+      vpa-enabled: "true"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "*"
+      minAllowed:
+        cpu: "100m"
+        memory: "100Mi"
+      maxAllowed:
+        cpu: "1"
+        memory: "1Gi"

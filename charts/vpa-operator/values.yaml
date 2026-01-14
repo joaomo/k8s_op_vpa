@@ -1,0 +1,84 @@
+# Default values for vpa-operator
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/joaomo/k8s_op_vpa
+  pullPolicy: IfNotPresent
+  tag: "0.1.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+rbac:
+  create: true
+
+# Leader election configuration
+leaderElection:
+  enabled: true
+
+# Webhook configuration (requires cert-manager or manual TLS cert setup)
+webhook:
+  enabled: false
+
+# Metrics configuration
+metrics:
+  enabled: true
+  port: 8080
+
+# Health probes configuration
+healthProbes:
+  port: 8081
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+# Node selector for scheduling
+nodeSelector: {}
+
+# Tolerations for scheduling
+tolerations: []
+
+# Affinity rules for scheduling
+affinity: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Install CRDs
+crds:
+  install: true
+
+# Default VpaManager configuration (optional - creates a default VpaManager CR)
+defaultVpaManager:
+  enabled: false
+  name: default
+  spec:
+    enabled: true
+    updateMode: "Off"
+    namespaceSelector: {}
+    deploymentSelector: {}

@@ -1,0 +1,32 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-01-14
+
+### Added
+- Initial release of VPA Operator
+- VpaManager custom resource for configuring automatic VPA creation
+- Namespace, deployment, statefulset and daemonset label selectors for filtering targets
+- Configurable VPA update modes (Off, Initial, Auto)
+- Resource policies with min/max allowed settings
+- Prometheus metrics for observability
+- Deployment webhook for lifecycle events
+- E2E validation script (`hack/validate-operator.sh`)
+- GitHub Actions CI/CD workflows for testing and releases
+- Helm chart for installation
+- Multi-architecture Docker image support (amd64/arm64)
+
+### Security
+- Container runs as non-root user (UID 65532)
+- Read-only root filesystem
+- Dropped all Linux capabilities
+- Security context with `allowPrivilegeEscalation: false`
+
+[Unreleased]: https://github.com/joaomo/k8s_op_vpa/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/joaomo/k8s_op_vpa/releases/tag/v0.1.0

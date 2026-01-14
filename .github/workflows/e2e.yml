@@ -1,0 +1,56 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    name: E2E Validation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+      with:
+        version: 'v3.14.0'
+
+    - name: Create kind cluster
+      uses: helm/kind-action@v1
+      with:
+        cluster_name: vpa-operator-test
+        wait: 120s
+
+    - name: Build operator image
+      run: |
+        docker build --build-arg TARGETARCH=amd64 -t vpa-operator:e2e-test .
+        kind load docker-image vpa-operator:e2e-test --name vpa-operator-test
+
+    - name: Run E2E validation
+      run: |
+        ./hack/validate-operator.sh --image vpa-operator:e2e-test
+      env:
+        CI: true
+
+    - name: Debug on failure
+      if: failure()
+      run: |
+        echo "=== Helm Release Status ==="
+        helm list -A || true
+        echo "=== Operator Logs ==="
+        kubectl logs -n vpa-operator-system -l app.kubernetes.io/name=vpa-operator --tail=100 || true
+        echo "=== VpaManager Status ==="
+        kubectl get vpamanager -o yaml || true
+        echo "=== VPAs ==="
+        kubectl get vpa -A -o yaml || true
+        echo "=== Events ==="
+        kubectl get events -A --sort-by='.lastTimestamp' | tail -50 || true

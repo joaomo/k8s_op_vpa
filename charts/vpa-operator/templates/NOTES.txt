@@ -1,0 +1,38 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+To verify the installation:
+
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "vpa-operator.name" . }}
+
+To check the operator logs:
+
+  kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "vpa-operator.name" . }} -f
+
+{{- if .Values.defaultVpaManager.enabled }}
+
+A default VpaManager "{{ .Values.defaultVpaManager.name }}" has been created.
+To check its status:
+
+  kubectl get vpam {{ .Values.defaultVpaManager.name }}
+
+{{- else }}
+
+To create a VpaManager, apply a manifest like:
+
+  apiVersion: operators.joaomo.io/v1
+  kind: VpaManager
+  metadata:
+    name: my-vpamanager
+  spec:
+    enabled: true
+    updateMode: "Off"
+    namespaceSelector:
+      matchLabels:
+        vpa-enabled: "true"
+
+{{- end }}
+
+For more information, visit: https://github.com/joaomo/k8s_op_vpa
