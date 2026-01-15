@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-01-15
+
 ### Changed
 - Status updates now use `Patch` instead of `Update` to avoid race conditions with stale `resourceVersion`
 
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - E2E test for validating VPA owner reference configuration
 - GitHub Container Registry (GHCR) support in CI/CD workflows
+- Helm chart publishing to GHCR OCI registry (`oci://ghcr.io/joaomo/charts/vpa-operator`)
 
 ## [0.1.0] - 2026-01-14
 
@@ -39,5 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropped all Linux capabilities
 - Security context with `allowPrivilegeEscalation: false`
 
-[Unreleased]: https://github.com/joaomo/k8s_op_vpa/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/joaomo/k8s_op_vpa/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/joaomo/k8s_op_vpa/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/joaomo/k8s_op_vpa/releases/tag/v0.1.0
