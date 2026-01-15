@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Status updates now use `Patch` instead of `Update` to avoid race conditions with stale `resourceVersion`
+- **Performance**: Workload iteration now uses pagination (500 items per page) to reduce memory usage
+- **Performance**: Status now stores counts by workload type instead of full workload list (prevents etcd size limits)
+- **Performance**: VPA updates use hash-based change detection to skip unnecessary API calls
 
 ### Fixed
 - VPA owner references now include `Controller: true` and `BlockOwnerDeletion: true` for proper Kubernetes garbage collection
