@@ -281,12 +281,16 @@ func (h *DeploymentWebhookHandler) buildVPA(vpaManager *autoscalingv1.VpaManager
 	})
 
 	// Set owner reference to deployment for garbage collection
+	controller := true
+	blockOwnerDeletion := true
 	vpa.SetOwnerReferences([]metav1.OwnerReference{
 		{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Name:       deployment.Name,
-			UID:        deployment.UID,
+			APIVersion:         "apps/v1",
+			Kind:               "Deployment",
+			Name:               deployment.Name,
+			UID:                deployment.UID,
+			Controller:         &controller,
+			BlockOwnerDeletion: &blockOwnerDeletion,
 		},
 	})
 

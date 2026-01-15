@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpa-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # OCI Helm chart from GitHub Container Registry
+    repoURL: ghcr.io/joaomo/charts
+    chart: vpa-operator
+    targetRevision: 0.2.0
+    helm:
+      valueFiles:
+        - values-argocd.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpa-operator-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

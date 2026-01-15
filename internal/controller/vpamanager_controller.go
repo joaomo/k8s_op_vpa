@@ -2,6 +2,8 @@ package controller
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -87,11 +89,15 @@ func (r *VpaManagerReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		return reconcile.Result{}, err
 	}
 
-	// Track managed workloads
-	managedWorkloads := []autoscalingv1.WorkloadReference{}
+	// Track counts by workload type (memory-efficient)
+	counts := map[string]int{}
+	totalManaged := 0
 	watchedWorkloadsCount := 0
 
-	// For each matching namespace, process all workload types
+	// Track VPA names for orphan cleanup
+	managedVPAKeys := make(map[string]bool)
+
+	// For each matching namespace, process all workload types with streaming
 	for _, ns := range matchingNamespaces {
 		for _, wc := range r.WorkloadConfigs {
 			selector := wc.Selector(&vpaManager.Spec)
@@ -99,36 +105,30 @@ func (r *VpaManagerReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 				continue
 			}
 
-			workloads, err := wc.Provider.List(ctx, r.Client, ns.Name, selector)
-			if err != nil {
-				log.Error(err, "failed to list workloads", "kind", wc.Provider.Kind(), "namespace", ns.Name)
-				continue
-			}
-
-			watchedWorkloadsCount += len(workloads)
-			for _, wl := range workloads {
+			err := wc.Provider.ForEach(ctx, r.Client, ns.Name, selector, func(wl workload.Workload) (bool, error) {
+				watchedWorkloadsCount++
 				vpaName := fmt.Sprintf("%s-vpa", wl.GetName())
 				created, err := r.ensureVPAForWorkload(ctx, vpaManager, wl.GetKind(), wl.GetName(), wl.GetNamespace(), wl.GetUID(), vpaName)
 				if err != nil {
 					log.Error(err, "failed to ensure VPA", "kind", wl.GetKind(), "name", wl.GetName(), "namespace", wl.GetNamespace())
-					continue
+					return true, nil // continue despite error
 				}
 				if created {
 					r.Metrics.RecordVPAOperation("create", vpaManager.Name)
 				}
-				managedWorkloads = append(managedWorkloads, autoscalingv1.WorkloadReference{
-					Kind:      wl.GetKind(),
-					Name:      wl.GetName(),
-					Namespace: wl.GetNamespace(),
-					UID:       string(wl.GetUID()),
-					VpaName:   vpaName,
-				})
+				counts[wl.GetKind()]++
+				totalManaged++
+				managedVPAKeys[fmt.Sprintf("%s/%s", wl.GetNamespace(), vpaName)] = true
+				return true, nil
+			})
+			if err != nil {
+				log.Error(err, "failed to iterate workloads", "kind", wc.Provider.Kind(), "namespace", ns.Name)
 			}
 		}
 	}
 
 	// Clean up orphaned VPAs
-	orphansDeleted, err := r.cleanupOrphanedVPAs(ctx, vpaManager, managedWorkloads)
+	orphansDeleted, err := r.cleanupOrphanedVPAsWithKeys(ctx, vpaManager, managedVPAKeys)
 	if err != nil {
 		log.Error(err, "failed to cleanup orphaned VPAs")
 	}
@@ -136,24 +136,29 @@ func (r *VpaManagerReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		r.Metrics.RecordVPAOperation("delete", vpaManager.Name)
 	}
 
-	// Update status
+	// Update status using Patch to avoid conflicts with stale resourceVersion
 	now := metav1.Now()
-	vpaManager.Status.ManagedVPAs = len(managedWorkloads)
-	vpaManager.Status.ManagedDeployments = managedWorkloads // backward compatibility
-	vpaManager.Status.ManagedWorkloads = managedWorkloads
-	vpaManager.Status.LastReconcileTime = &now
+	statusUpdate := vpaManager.DeepCopy()
+	statusUpdate.Status.ManagedVPAs = totalManaged
+	statusUpdate.Status.DeploymentCount = counts["Deployment"]
+	statusUpdate.Status.StatefulSetCount = counts["StatefulSet"]
+	statusUpdate.Status.DaemonSetCount = counts["DaemonSet"]
+	// Clear deprecated fields to reduce status size
+	statusUpdate.Status.ManagedDeployments = nil
+	statusUpdate.Status.ManagedWorkloads = nil
+	statusUpdate.Status.LastReconcileTime = &now
 
-	if err := r.Status().Update(ctx, vpaManager); err != nil {
-		log.Error(err, "failed to update VpaManager status")
+	if err := r.Status().Patch(ctx, statusUpdate, client.MergeFrom(vpaManager)); err != nil {
+		log.Error(err, "failed to patch VpaManager status")
 		r.Metrics.RecordReconcile(vpaManager.Name, start, err)
 		return reconcile.Result{}, err
 	}
 
 	// Update metrics
-	r.Metrics.UpdateManagedResources(vpaManager.Name, len(managedWorkloads), watchedWorkloadsCount)
+	r.Metrics.UpdateManagedResources(vpaManager.Name, totalManaged, watchedWorkloadsCount)
 	r.Metrics.RecordReconcile(vpaManager.Name, start, nil)
 
-	log.Info("reconciliation complete", "managedVPAs", len(managedWorkloads), "watchedWorkloads", watchedWorkloadsCount)
+	log.Info("reconciliation complete", "managedVPAs", totalManaged, "watchedWorkloads", watchedWorkloadsCount)
 	return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
@@ -181,9 +186,18 @@ func (r *VpaManagerReconciler) getMatchingNamespaces(ctx context.Context, select
 	return namespaceList.Items, nil
 }
 
+// specHash computes a hash of the VPA spec for change detection
+func specHash(spec map[string]interface{}) string {
+	data, _ := json.Marshal(spec)
+	hash := sha256.Sum256(data)
+	return fmt.Sprintf("%x", hash[:8])
+}
+
 // ensureVPAForWorkload creates or updates a VPA for a workload (Deployment or StatefulSet)
 func (r *VpaManagerReconciler) ensureVPAForWorkload(ctx context.Context, vpaManager *autoscalingv1.VpaManager, kind, name, namespace string, uid types.UID, vpaName string) (bool, error) {
 	vpa := r.buildVPAForWorkload(vpaManager, kind, name, namespace, uid, vpaName)
+	desiredSpec := vpa.Object["spec"].(map[string]interface{})
+	desiredHash := specHash(desiredSpec)
 
 	// Check if VPA already exists
 	existing := &unstructured.Unstructured{}
@@ -192,6 +206,14 @@ func (r *VpaManagerReconciler) ensureVPAForWorkload(ctx context.Context, vpaMana
 
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// Add spec hash annotation for future change detection
+			annotations := vpa.GetAnnotations()
+			if annotations == nil {
+				annotations = make(map[string]string)
+			}
+			annotations["vpa-operator.io/spec-hash"] = desiredHash
+			vpa.SetAnnotations(annotations)
+
 			// Create VPA
 			if err := r.Create(ctx, vpa); err != nil {
 				return false, err
@@ -201,8 +223,27 @@ func (r *VpaManagerReconciler) ensureVPAForWorkload(ctx context.Context, vpaMana
 		return false, err
 	}
 
-	// Update existing VPA if needed
-	existing.Object["spec"] = vpa.Object["spec"]
+	// Check if update is needed using hash comparison
+	existingAnnotations := existing.GetAnnotations()
+	existingHash := ""
+	if existingAnnotations != nil {
+		existingHash = existingAnnotations["vpa-operator.io/spec-hash"]
+	}
+
+	// Skip update if spec hasn't changed
+	if existingHash == desiredHash {
+		return false, nil
+	}
+
+	// Update existing VPA
+	existing.Object["spec"] = desiredSpec
+	annotations := existing.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["vpa-operator.io/spec-hash"] = desiredHash
+	existing.SetAnnotations(annotations)
+
 	if err := r.Update(ctx, existing); err != nil {
 		return false, err
 	}
@@ -224,12 +265,16 @@ func (r *VpaManagerReconciler) buildVPAForWorkload(vpaManager *autoscalingv1.Vpa
 	})
 
 	// Set owner reference to workload for garbage collection
+	controller := true
+	blockOwnerDeletion := true
 	vpa.SetOwnerReferences([]metav1.OwnerReference{
 		{
-			APIVersion: "apps/v1",
-			Kind:       kind,
-			Name:       name,
-			UID:        uid,
+			APIVersion:         "apps/v1",
+			Kind:               kind,
+			Name:               name,
+			UID:                uid,
+			Controller:         &controller,
+			BlockOwnerDeletion: &blockOwnerDeletion,
 		},
 	})
 
@@ -277,16 +322,9 @@ func (r *VpaManagerReconciler) buildVPAForWorkload(vpaManager *autoscalingv1.Vpa
 	return vpa
 }
 
-// cleanupOrphanedVPAs removes VPAs for workloads that no longer match
-func (r *VpaManagerReconciler) cleanupOrphanedVPAs(ctx context.Context, vpaManager *autoscalingv1.VpaManager, currentWorkloads []autoscalingv1.WorkloadReference) (int, error) {
-	// Build a set of current VPA names
-	currentVPAs := make(map[string]bool)
-	for _, wl := range currentWorkloads {
-		key := fmt.Sprintf("%s/%s", wl.Namespace, wl.VpaName)
-		currentVPAs[key] = true
-	}
-
-	// List all VPAs managed by this operator
+// cleanupOrphanedVPAsWithKeys removes VPAs for workloads that no longer match (memory-efficient version)
+func (r *VpaManagerReconciler) cleanupOrphanedVPAsWithKeys(ctx context.Context, vpaManager *autoscalingv1.VpaManager, currentVPAKeys map[string]bool) (int, error) {
+	// List all VPAs managed by this operator with pagination
 	vpaList := &unstructured.UnstructuredList{}
 	vpaList.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "autoscaling.k8s.io",
@@ -294,21 +332,40 @@ func (r *VpaManagerReconciler) cleanupOrphanedVPAs(ctx context.Context, vpaManag
 		Kind:    "VerticalPodAutoscalerList",
 	})
 
-	if err := r.List(ctx, vpaList, client.MatchingLabels{
-		"app.kubernetes.io/managed-by": "vpa-operator",
-		"app.kubernetes.io/created-by": vpaManager.Name,
-	}); err != nil {
-		return 0, err
+	listOpts := []client.ListOption{
+		client.MatchingLabels{
+			"app.kubernetes.io/managed-by": "vpa-operator",
+			"app.kubernetes.io/created-by": vpaManager.Name,
+		},
+		client.Limit(500),
 	}
 
 	deleted := 0
-	for _, vpa := range vpaList.Items {
-		key := fmt.Sprintf("%s/%s", vpa.GetNamespace(), vpa.GetName())
-		if !currentVPAs[key] {
-			if err := r.Delete(ctx, &vpa); err != nil && !errors.IsNotFound(err) {
-				return deleted, err
+	var continueToken string
+
+	for {
+		opts := listOpts
+		if continueToken != "" {
+			opts = append(opts, client.Continue(continueToken))
+		}
+
+		if err := r.List(ctx, vpaList, opts...); err != nil {
+			return deleted, err
+		}
+
+		for _, vpa := range vpaList.Items {
+			key := fmt.Sprintf("%s/%s", vpa.GetNamespace(), vpa.GetName())
+			if !currentVPAKeys[key] {
+				if err := r.Delete(ctx, &vpa); err != nil && !errors.IsNotFound(err) {
+					return deleted, err
+				}
+				deleted++
 			}
-			deleted++
+		}
+
+		continueToken = vpaList.GetContinue()
+		if continueToken == "" {
+			break
 		}
 	}
 

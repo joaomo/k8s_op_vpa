@@ -6,6 +6,10 @@ metadata:
   labels:
     {{- include "vpa-operator.labels" . | nindent 4 }}
     control-plane: controller-manager
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -17,6 +21,13 @@ spec:
       labels:
         {{- include "vpa-operator.selectorLabels" . | nindent 8 }}
         control-plane: controller-manager
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

@@ -567,7 +567,7 @@ func TestReconcile_UpdatesStatusWithManagedVPAsCount(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, updatedManager.Status.ManagedVPAs, "should track 2 managed VPAs")
-	assert.Len(t, updatedManager.Status.ManagedDeployments, 2, "should list 2 managed deployments")
+	assert.Equal(t, 2, updatedManager.Status.DeploymentCount, "should track 2 deployments")
 	assert.NotNil(t, updatedManager.Status.LastReconcileTime, "should set last reconcile time")
 }
 
@@ -1054,12 +1054,13 @@ func TestReconcile_ProcessesBothDeploymentsAndStatefulSets(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, vpaList.Items, 2, "should create VPAs for both Deployment and StatefulSet")
 
-	// Verify status has both workloads
+	// Verify status has both workloads using count fields
 	updatedManager := &autoscalingv1.VpaManager{}
 	err = fakeClient.Get(ctx, types.NamespacedName{Name: "test-vpamanager"}, updatedManager)
 	require.NoError(t, err)
 	assert.Equal(t, 2, updatedManager.Status.ManagedVPAs)
-	assert.Len(t, updatedManager.Status.ManagedWorkloads, 2)
+	assert.Equal(t, 1, updatedManager.Status.DeploymentCount)
+	assert.Equal(t, 1, updatedManager.Status.StatefulSetCount)
 }
 
 // Test: Automatically create VPA resources for DaemonSets
@@ -1359,21 +1360,16 @@ func TestReconcile_ProcessesAllWorkloadTypes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, vpaList.Items, 3, "should create VPAs for Deployment, StatefulSet, and DaemonSet")
 
-	// Verify status has all workloads
+	// Verify status has all workloads using count fields
 	updatedManager := &autoscalingv1.VpaManager{}
 	err = fakeClient.Get(ctx, types.NamespacedName{Name: "test-vpamanager"}, updatedManager)
 	require.NoError(t, err)
 	assert.Equal(t, 3, updatedManager.Status.ManagedVPAs)
-	assert.Len(t, updatedManager.Status.ManagedWorkloads, 3)
 
-	// Verify each workload type is represented
-	kindCounts := make(map[string]int)
-	for _, wl := range updatedManager.Status.ManagedWorkloads {
-		kindCounts[wl.Kind]++
-	}
-	assert.Equal(t, 1, kindCounts["Deployment"])
-	assert.Equal(t, 1, kindCounts["StatefulSet"])
-	assert.Equal(t, 1, kindCounts["DaemonSet"])
+	// Verify each workload type count
+	assert.Equal(t, 1, updatedManager.Status.DeploymentCount)
+	assert.Equal(t, 1, updatedManager.Status.StatefulSetCount)
+	assert.Equal(t, 1, updatedManager.Status.DaemonSetCount)
 }
 
 // Test: VPA is owned by VpaManager for garbage collection

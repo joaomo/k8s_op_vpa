@@ -78,15 +78,27 @@ type DeploymentReference = WorkloadReference
 
 // VpaManagerStatus defines the observed state of VpaManager
 type VpaManagerStatus struct {
-	// ManagedVPAs is the number of VPAs managed by this operator
+	// ManagedVPAs is the total number of VPAs managed by this operator
 	ManagedVPAs int `json:"managedVPAs"`
 
 	// ManagedDeployments is a list of deployments that have VPAs
-	// Deprecated: Use ManagedWorkloads instead
+	// Deprecated: Use ManagedWorkloads instead. Will be removed in v1.
+	// +optional
 	ManagedDeployments []WorkloadReference `json:"managedDeployments,omitempty"`
 
-	// ManagedWorkloads is a list of all workloads (Deployments and StatefulSets) that have VPAs
+	// ManagedWorkloads is a list of all workloads that have VPAs
+	// Deprecated: This field is expensive at scale. Use count fields instead.
+	// +optional
 	ManagedWorkloads []WorkloadReference `json:"managedWorkloads,omitempty"`
+
+	// DeploymentCount is the number of deployments with managed VPAs
+	DeploymentCount int `json:"deploymentCount,omitempty"`
+
+	// StatefulSetCount is the number of statefulsets with managed VPAs
+	StatefulSetCount int `json:"statefulSetCount,omitempty"`
+
+	// DaemonSetCount is the number of daemonsets with managed VPAs
+	DaemonSetCount int `json:"daemonSetCount,omitempty"`
 
 	// LastReconcileTime is the last time the operator reconciled
 	LastReconcileTime *metav1.Time `json:"lastReconcileTime,omitempty"`
