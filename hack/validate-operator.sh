@@ -329,6 +329,61 @@ test_vpa_configuration() {
 }
 
 #######################################
+# Test: VPA owner reference
+#######################################
+test_vpa_owner_reference() {
+    log_step "Test: VPA has correct owner reference for garbage collection"
+
+    # Check owner reference exists and points to deployment
+    local owner_kind
+    owner_kind=$(kubectl get vpa test-app-vpa -n "${TEST_NAMESPACE}" -o jsonpath='{.metadata.ownerReferences[0].kind}' 2>/dev/null)
+
+    if [[ "${owner_kind}" == "Deployment" ]]; then
+        log_success "VPA owner reference kind is 'Deployment'"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        log_error "VPA owner reference kind is '${owner_kind}', expected 'Deployment'"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Check owner reference name
+    local owner_name
+    owner_name=$(kubectl get vpa test-app-vpa -n "${TEST_NAMESPACE}" -o jsonpath='{.metadata.ownerReferences[0].name}' 2>/dev/null)
+
+    if [[ "${owner_name}" == "test-app" ]]; then
+        log_success "VPA owner reference name is 'test-app'"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        log_error "VPA owner reference name is '${owner_name}', expected 'test-app'"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Check controller flag is set
+    local controller_flag
+    controller_flag=$(kubectl get vpa test-app-vpa -n "${TEST_NAMESPACE}" -o jsonpath='{.metadata.ownerReferences[0].controller}' 2>/dev/null)
+
+    if [[ "${controller_flag}" == "true" ]]; then
+        log_success "VPA owner reference has controller=true"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        log_error "VPA owner reference controller is '${controller_flag}', expected 'true'"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+
+    # Check blockOwnerDeletion flag is set
+    local block_deletion_flag
+    block_deletion_flag=$(kubectl get vpa test-app-vpa -n "${TEST_NAMESPACE}" -o jsonpath='{.metadata.ownerReferences[0].blockOwnerDeletion}' 2>/dev/null)
+
+    if [[ "${block_deletion_flag}" == "true" ]]; then
+        log_success "VPA owner reference has blockOwnerDeletion=true"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        log_error "VPA owner reference blockOwnerDeletion is '${block_deletion_flag}', expected 'true'"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+}
+
+#######################################
 # Test: VpaManager status
 #######################################
 test_vpamanager_status() {
@@ -555,6 +610,7 @@ main() {
     # Run tests
     test_vpa_creation
     test_vpa_configuration
+    test_vpa_owner_reference
     test_vpamanager_status
     test_operator_no_errors
     test_vpa_cleanup

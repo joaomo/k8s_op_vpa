@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vpa-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/joaomo/k8s_op_vpa.git
+    targetRevision: v0.1.0
+    path: charts/vpa-operator
+    helm:
+      valueFiles:
+        - values-argocd.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vpa-operator-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

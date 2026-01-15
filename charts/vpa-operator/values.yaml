@@ -11,6 +11,18 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+# Common labels to add to all resources
+commonLabels: {}
+
+# Common annotations to add to all resources
+commonAnnotations: {}
+
+# Additional labels for pods
+podLabels: {}
+
+# Additional annotations for pods
+podAnnotations: {}
+
 serviceAccount:
   create: true
   annotations: {}

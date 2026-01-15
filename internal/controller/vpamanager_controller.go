@@ -136,15 +136,16 @@ func (r *VpaManagerReconciler) Reconcile(ctx context.Context, req reconcile.Requ
 		r.Metrics.RecordVPAOperation("delete", vpaManager.Name)
 	}
 
-	// Update status
+	// Update status using Patch to avoid conflicts with stale resourceVersion
 	now := metav1.Now()
-	vpaManager.Status.ManagedVPAs = len(managedWorkloads)
-	vpaManager.Status.ManagedDeployments = managedWorkloads // backward compatibility
-	vpaManager.Status.ManagedWorkloads = managedWorkloads
-	vpaManager.Status.LastReconcileTime = &now
+	statusUpdate := vpaManager.DeepCopy()
+	statusUpdate.Status.ManagedVPAs = len(managedWorkloads)
+	statusUpdate.Status.ManagedDeployments = managedWorkloads // backward compatibility
+	statusUpdate.Status.ManagedWorkloads = managedWorkloads
+	statusUpdate.Status.LastReconcileTime = &now
 
-	if err := r.Status().Update(ctx, vpaManager); err != nil {
-		log.Error(err, "failed to update VpaManager status")
+	if err := r.Status().Patch(ctx, statusUpdate, client.MergeFrom(vpaManager)); err != nil {
+		log.Error(err, "failed to patch VpaManager status")
 		r.Metrics.RecordReconcile(vpaManager.Name, start, err)
 		return reconcile.Result{}, err
 	}
@@ -224,12 +225,16 @@ func (r *VpaManagerReconciler) buildVPAForWorkload(vpaManager *autoscalingv1.Vpa
 	})
 
 	// Set owner reference to workload for garbage collection
+	controller := true
+	blockOwnerDeletion := true
 	vpa.SetOwnerReferences([]metav1.OwnerReference{
 		{
-			APIVersion: "apps/v1",
-			Kind:       kind,
-			Name:       name,
-			UID:        uid,
+			APIVersion:         "apps/v1",
+			Kind:               kind,
+			Name:               name,
+			UID:                uid,
+			Controller:         &controller,
+			BlockOwnerDeletion: &blockOwnerDeletion,
 		},
 	})
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Status updates now use `Patch` instead of `Update` to avoid race conditions with stale `resourceVersion`
+
+### Fixed
+- VPA owner references now include `Controller: true` and `BlockOwnerDeletion: true` for proper Kubernetes garbage collection
+- Improved Helm chart extensibility with support for `commonLabels`, `commonAnnotations`, `podLabels`, and `podAnnotations`
+
+### Added
+- E2E test for validating VPA owner reference configuration
+- GitHub Container Registry (GHCR) support in CI/CD workflows
+
 ## [0.1.0] - 2026-01-14
 
 ### Added
