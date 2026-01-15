@@ -94,3 +94,5 @@ defaultVpaManager:
     updateMode: "Off"
     namespaceSelector: {}
     deploymentSelector: {}
+    statefulSetSelector: {}
+    daemonSetSelector: {}

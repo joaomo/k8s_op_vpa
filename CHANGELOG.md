@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - VPA owner references now include `Controller: true` and `BlockOwnerDeletion: true` for proper Kubernetes garbage collection
 - Improved Helm chart extensibility with support for `commonLabels`, `commonAnnotations`, `podLabels`, and `podAnnotations`
+- Added missing `statefulSetSelector` and `daemonSetSelector` to `defaultVpaManager` Helm values
 
 ### Added
 - E2E test for validating VPA owner reference configuration
