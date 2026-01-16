@@ -11,8 +11,19 @@ spec:
     chart: vpa-operator
     targetRevision: 0.2.0
     helm:
-      valueFiles:
-        - values-argocd.yaml
+      # Note: valueFiles not supported with OCI charts, use inline values
+      values: |
+        image:
+          repository: ghcr.io/joaomo/k8s_op_vpa
+          tag: "0.2.0"
+        defaultVpaManager:
+          enabled: true
+          name: default
+          spec:
+            enabled: true
+            updateMode: "Off"
+            namespaceSelector: {}
+            deploymentSelector: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: vpa-operator-system
