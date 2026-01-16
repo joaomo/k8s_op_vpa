@@ -50,6 +50,10 @@ spec:
         - --leader-elect
         {{- end }}
         - --enable-webhook={{ .Values.webhook.enabled }}
+        - --zap-log-level={{ .Values.logging.level }}
+        - --zap-devel={{ .Values.logging.development }}
+        - --zap-encoder={{ .Values.logging.encoder }}
+        - --zap-stacktrace-level={{ .Values.logging.stacktraceLevel }}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 12 }}
         ports:
