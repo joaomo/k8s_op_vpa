@@ -48,6 +48,17 @@ metrics:
 healthProbes:
   port: 8081
 
+# Logging configuration
+logging:
+  # Log level: debug, info, error
+  level: info
+  # Development mode (more verbose, human-readable output)
+  development: false
+  # Log encoder: json or console
+  encoder: json
+  # Stacktrace level: info, error, panic
+  stacktraceLevel: error
+
 # Resource limits and requests
 resources:
   limits:

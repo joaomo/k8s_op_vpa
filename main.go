@@ -45,7 +45,7 @@ func main() {
 	flag.BoolVar(&enableWebhook, "enable-webhook", true, "Enable the deployment webhook.")
 
 	opts := zap.Options{
-		Development: true,
+		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
