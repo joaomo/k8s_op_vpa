@@ -45,6 +45,30 @@ spec:
           spec:
             description: VpaManagerSpec defines the desired state of VpaManager
             properties:
+              daemonSetSelector:
+                description: DaemonSetSelector selects daemonsets to manage
+                properties:
+                  matchExpressions:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
               deploymentSelector:
                 description: DeploymentSelector selects deployments to manage
                 properties:
@@ -105,12 +129,6 @@ spec:
                       properties:
                         containerName:
                           type: string
-                        controlledResources:
-                          items:
-                            type: string
-                          type: array
-                        controlledValues:
-                          type: string
                         maxAllowed:
                           additionalProperties:
                             anyOf:
@@ -125,10 +143,32 @@ spec:
                             - type: string
                             x-kubernetes-int-or-string: true
                           type: object
-                        mode:
-                          type: string
                       type: object
                     type: array
+                type: object
+              statefulSetSelector:
+                description: StatefulSetSelector selects statefulsets to manage
+                properties:
+                  matchExpressions:
+                    items:
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    type: object
                 type: object
               updateMode:
                 default: "Off"
@@ -142,52 +182,37 @@ spec:
           status:
             description: VpaManagerStatus defines the observed state of VpaManager
             properties:
-              conditions:
-                items:
-                  properties:
-                    lastTransitionTime:
-                      format: date-time
-                      type: string
-                    message:
-                      type: string
-                    observedGeneration:
-                      format: int64
-                      type: integer
-                    reason:
-                      type: string
-                    status:
-                      type: string
-                    type:
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
+              daemonSetCount:
+                description: DaemonSetCount is the number of daemonsets with managed VPAs
+                type: integer
+              deploymentCount:
+                description: DeploymentCount is the number of deployments with managed VPAs
+                type: integer
               lastReconcileTime:
                 format: date-time
                 type: string
               managedDeployments:
-                description: ManagedDeployments is a list of deployments that have VPAs
+                description: ManagedDeployments is a list of deployments that have VPAs (deprecated)
                 items:
-                  description: DeploymentReference contains information about a deployment with a VPA
+                  description: WorkloadReference contains information about a workload with a VPA
                   properties:
+                    kind:
+                      description: Kind is the type of workload
+                      type: string
                     name:
-                      description: Name is the name of the deployment
+                      description: Name is the name of the workload
                       type: string
                     namespace:
-                      description: Namespace is the namespace of the deployment
+                      description: Namespace is the namespace of the workload
                       type: string
                     uid:
-                      description: UID is the UID of the deployment
+                      description: UID is the UID of the workload
                       type: string
                     vpaName:
                       description: VpaName is the name of the VPA resource
                       type: string
                   required:
+                  - kind
                   - name
                   - namespace
                   - uid
@@ -195,6 +220,38 @@ spec:
                   type: object
                 type: array
               managedVPAs:
+                description: ManagedVPAs is the total number of VPAs managed by this operator
+                type: integer
+              managedWorkloads:
+                description: ManagedWorkloads is a list of all workloads that have VPAs (deprecated)
+                items:
+                  description: WorkloadReference contains information about a workload with a VPA
+                  properties:
+                    kind:
+                      description: Kind is the type of workload
+                      type: string
+                    name:
+                      description: Name is the name of the workload
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the workload
+                      type: string
+                    uid:
+                      description: UID is the UID of the workload
+                      type: string
+                    vpaName:
+                      description: VpaName is the name of the VPA resource
+                      type: string
+                  required:
+                  - kind
+                  - name
+                  - namespace
+                  - uid
+                  - vpaName
+                  type: object
+                type: array
+              statefulSetCount:
+                description: StatefulSetCount is the number of statefulsets with managed VPAs
                 type: integer
             type: object
         type: object
