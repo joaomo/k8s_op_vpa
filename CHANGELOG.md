@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-01-20
+
+### Added
+- Detailed [CONTRIBUTING.md](CONTRIBUTING.md) guide and Windsurf contribution rules to standardize community workflows
+- Regression test (`TestCRDSchemaMatchesGoTypes`) that validates CRD schemas stay in sync with Go API types
+
+### Changed
+- Helm chart exposes zap logging flags (`logging.level`, `logging.development`, encoder, stacktrace level) so operators can tune verbosity without rebuilding images
+- Default logger now starts in production mode (no implicit development verbosity)
+- CRD definitions now include every field referenced by the controller (selectors, workload counts, workload references) to prevent API warnings
+
 ## [0.2.0] - 2026-01-15
 
 ### Changed
@@ -46,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropped all Linux capabilities
 - Security context with `allowPrivilegeEscalation: false`
 
-[Unreleased]: https://github.com/joaomo/k8s_op_vpa/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/joaomo/k8s_op_vpa/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/joaomo/k8s_op_vpa/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/joaomo/k8s_op_vpa/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/joaomo/k8s_op_vpa/releases/tag/v0.1.0
