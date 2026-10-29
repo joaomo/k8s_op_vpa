@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Update the pinned distroless runtime to Debian 13, whose CA bundle excludes AAA Certificate Services and emSign ECC Root CA - G3 while retaining the other trusted roots
+
 ## [0.2.1] - 2026-01-20
 
 ### Added
